@@ -128,9 +128,16 @@
 -
 快捷跳转地址 [https://github.com/${你的github用户名}/mimotion/settings/variables/actions](../../settings/variables/actions)
     - 填写自动执行的时间，单位为小时，此处需要设置UTC时间，例如设置 `0,2,4,6,8,14` 则会在北京时间 `8,10,12,14,16,22` 点触发执行
-- 添加完成后可以在Actions中手动触发：`Random Cron` 来触发替换，或者等下一次定时执行时它将会自动替换。
+- **重要说明**：修改 `CRON_HOURS` 变量后，请前往 Actions 手动触发一次 `Random Cron` 工作流，该工作流会更新 `run.yml` 中的触发时间。平时的刷步数不会产生额外的 Commit 提交。
 
-##### 2、编辑 **.github/workflows/run.yml** 中的cron表达式
+##### 2、添加 `RANDOM_SLEEP_MAX_MINUTES` 自定义随机延迟 (可选)
+
+- 在 Variables 页面中添加名为 `RANDOM_SLEEP_MAX_MINUTES` 的变量。
+- 填写最大随机等待的分钟数（如填写 `30` 代表随机休眠 0~30 分钟；填写 `60` 代表 0~60 分钟；填写 `0` 代表不休眠）。
+- **默认值**：如未配置该变量，系统默认最大随机休眠 60 分钟。
+- **注意**：仅在定时任务触发时会随机休眠，手动点击 `Run workflow` 触发时会自动跳过休眠，立竿见影执行刷步。
+
+##### 3、编辑 **.github/workflows/run.yml** 中的cron表达式
 
 - cron表达式格式如下: `分 小时 日期 月份 年份`
 - github actions中执行时间为UTC时间，即**北京时间-8**，如果需要每天`8，10，12，14，16，22`

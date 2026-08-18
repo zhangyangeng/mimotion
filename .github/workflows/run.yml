@@ -1,36 +1,53 @@
 name: 刷步数
 
 on:
-  schedule:
-    - cron: '27 14 * * *'
-  workflow_dispatch:
+    schedule:
+        - cron: '27 14 * * *'
+    workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout codes
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.PAT }} #此处PAT需要申请，教程详见：README
-      - name: 初始化Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.10"
-          
-      - name: 开始
-        env:
-            CONFIG: ${{ secrets.CONFIG }}
-            AES_KEY: ${{ secrets.AES_KEY }}
-        run: |
-          pip3 install -r requirements.txt
-          python3 main.py
+    build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        steps:
+            - name: Checkout codes
+              uses: actions/checkout@v5
+              with:
+                  token: ${{ secrets.PAT }} #此处PAT需要申请，教程详见：README
 
-      - name: persist tokens
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@users.noreply.github.com
-          git add .
-          git commit -m "persist tokens trigger by ${{ github.event_name }}"
-          git push origin master
+            - name: Restore encrypted tokens cache
+              uses: actions/cache@v3
+              with:
+                  path: encrypted_tokens.data
+                  key: tokens-${{ runner.os }}-${{ github.run_id }}
+                  restore-keys: |
+                      tokens-${{ runner.os }}-
+
+            - name: 初始化Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: '3.10'
+
+            - name: 随机延迟
+              if: github.event_name == 'schedule'
+              env:
+                  RANDOM_SLEEP_MAX_MINUTES: ${{ vars.RANDOM_SLEEP_MAX_MINUTES }}
+              run: |
+                  # 默认最大休眠 60 分钟，支持通过仓库变量 RANDOM_SLEEP_MAX_MINUTES 自定义 (如设置为 60 或 15)
+                  MAX_MIN=${RANDOM_SLEEP_MAX_MINUTES:-60}
+                  MAX_SECONDS=$((MAX_MIN * 60))
+                  if [ $MAX_SECONDS -gt 0 ]; then
+                    SLEEP_TIME=$((RANDOM % MAX_SECONDS))
+                    echo "配置最大随机延迟: ${MAX_MIN} 分钟，本次随机休眠 ${SLEEP_TIME} 秒后开始刷步..."
+                    sleep $SLEEP_TIME
+                  else
+                    echo "已配置不休眠，直接开始刷步..."
+                  fi
+
+            - name: 开始
+              env:
+                  CONFIG: ${{ secrets.CONFIG }}
+                  AES_KEY: ${{ secrets.AES_KEY }}
+              run: |
+                  pip3 install -r requirements.txt
+                  python3 main.py
